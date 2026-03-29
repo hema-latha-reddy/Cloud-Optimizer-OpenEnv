@@ -6,8 +6,8 @@ tasks = ["easy", "medium", "hard"]
 for task in tasks:
     print(f"\n--- Testing Task: {task.upper()} ---")
     
-    # 1. Reset for this specific task
-    r = requests.get(f"{URL}/reset?task_id={task}")
+    # 1. CHANGED: Reset now uses requests.post instead of requests.get
+    r = requests.post(f"{URL}/reset?task_id={task}")
     print(f"Reset: {r.json()}")
     
     # 2. Take 5 steps (Action 2: Add Server)
@@ -15,7 +15,9 @@ for task in tasks:
     for i in range(5):
         r = requests.post(f"{URL}/step?action=2")
         data = r.json()
-        print(f"  Step {i+1} | Traffic: {data['traffic']} | Latency: {data['latency']}")
+        # Note: If your app.py returns the observation inside a dictionary, 
+        # you might need data['observation']['traffic']
+        print(f"  Step {i+1} | Traffic: {data.get('traffic', 'N/A')} | Latency: {data.get('latency', 'N/A')}")
 
     # 3. Check the Grader
     g = requests.get(f"{URL}/grader")
