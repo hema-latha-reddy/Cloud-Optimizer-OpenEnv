@@ -1,0 +1,9 @@
+version: "1.0.0"
+name: "Cloud-Optimizer-Cracking"
+observation_space:
+  traffic: "int"
+  servers: "int"
+  latency: "int"
+action_space:
+  type: "discrete"
+  values: [0, 1, 2]
