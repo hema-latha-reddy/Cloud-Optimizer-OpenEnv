@@ -1,5 +1,7 @@
 version: "1.0.0"
+env_id: "Cloud-Optimizer-Cracking"
 name: "Cloud-Optimizer-Cracking"
+entry_point: "app:app"
 observation_space:
   traffic: "int"
   servers: "int"
