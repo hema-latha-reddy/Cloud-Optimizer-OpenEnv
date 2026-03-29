@@ -53,7 +53,7 @@ env = CloudEnv()
 def home():
     return {"message": "Cloud Optimizer V1 - OpenEnv Ready", "team": "Cracking"}
 
-@app.get("/reset", response_model=Observation)
+@app.post("/reset", response_model=Observation)
 def reset_endpoint(task_id: str = "easy"):
     return env.reset(task_id)
 
