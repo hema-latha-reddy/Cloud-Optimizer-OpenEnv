@@ -19,7 +19,6 @@ dependencies = [
 
 # FIXES: Missing [project.scripts] server entry point
 [project.scripts]
-server = "server.app:app"
-
+server = "server.app:main"
 [tool.uv]
 package = true
