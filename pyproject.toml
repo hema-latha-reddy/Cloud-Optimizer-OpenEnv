@@ -5,11 +5,21 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "cloud-optimizer-cracking"
 version = "0.1.0"
-description = "Cloud infrastructure scaling environment for OpenEnv"
+description = "Cloud infrastructure scaling environment"
+readme = "README.md"
+requires-python = ">=3.10"
+# FIXES: Missing required dependency
 dependencies = [
+    "openenv>=0.2.0",
     "fastapi",
     "uvicorn",
     "pydantic",
-    "requests",
-    "numpy"
+    "requests"
 ]
+
+# FIXES: Missing [project.scripts] server entry point
+[project.scripts]
+server = "server.app:app"
+
+[tool.uv]
+package = true
