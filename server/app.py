@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 import random
+import uvicorn  # Moved import to the top
 
 app = FastAPI()
 
@@ -39,7 +40,6 @@ env = CloudEnv()
 
 @app.get("/")
 def home():
-    # Adding env_id here helps the validator identify your project
     return {
         "status": "openenv_compatible", 
         "env_id": "Cloud-Optimizer-Cracking",
@@ -49,12 +49,10 @@ def home():
 @app.post("/reset")
 def reset_endpoint(task_id: str = "easy"):
     observation = env.reset(task_id)
-    # OpenEnv Standard: Observation must be nested
     return {"observation": observation, "message": "Environment Reset"}
 
 @app.post("/step")
 def step_endpoint(action: int):
-    # Action 0: Remove, 1: Stay, 2: Add
     env.step_count += 1
     
     if action == 2: 
@@ -67,13 +65,11 @@ def step_endpoint(action: int):
     
     obs = env._get_obs_dict()
     
-    # Calculate Reward
     reward = 0.0
     if obs["latency"] < 150 and obs["servers"] < 10:
         reward = 1.0
         env.total_reward += 1.0
         
-    # OpenEnv Standard: Must return observation, reward, done, and info
     return {
         "observation": obs,
         "reward": reward,
@@ -88,6 +84,10 @@ def grader():
     final_score = min(1.0, env.total_reward / env.step_count)
     return {"score": round(final_score, 2), "steps": env.step_count}
 
-if __name__ == "__main__":
-    import uvicorn
+# --- THE FIX: ADDING THE MAIN FUNCTION ---
+def main():
+    """The entry point the validator is looking for."""
     uvicorn.run(app, host="0.0.0.0", port=7860)
+
+if __name__ == "__main__":
+    main()
