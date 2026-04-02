@@ -1,11 +1,26 @@
 version: "1.0.0"
 env_id: "Cloud-Optimizer-Cracking"
 name: "Cloud-Optimizer-Cracking"
-entry_point: "app:app"
+# CHANGE THIS LINE:
+entry_point: "server.app:main" 
+
 observation_space:
   traffic: "int"
   servers: "int"
   latency: "int"
+
 action_space:
   type: "discrete"
   values: [0, 1, 2]
+
+# ADD YOUR TASKS (Required for Phase 1)
+tasks:
+  - id: "easy"
+    difficulty: "easy"
+    description: "Maintain stability under low traffic."
+  - id: "medium"
+    difficulty: "medium"
+    description: "Handle random traffic spikes."
+  - id: "hard"
+    difficulty: "hard"
+    description: "Manage a high-load scale crisis."
