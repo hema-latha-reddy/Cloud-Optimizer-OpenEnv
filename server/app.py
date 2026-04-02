@@ -4,7 +4,6 @@ import uvicorn
 
 app = FastAPI()
 
-# --- THE ENVIRONMENT STATE ---
 class CloudEnv:
     def __init__(self):
         self.reset("easy")
@@ -32,7 +31,6 @@ class CloudEnv:
             "latency": latency
         }
 
-    # --- THIS IS THE CRITICAL ADDITION FOR PHASE 2 ---
     def step(self, action: int):
         self.step_count += 1
         
@@ -58,17 +56,12 @@ class CloudEnv:
             "info": {"step_count": self.step_count}
         }
 
+# Create the instance for direct Python imports
 env = CloudEnv()
-
-# --- CORE ENDPOINTS ---
 
 @app.get("/")
 def home():
-    return {
-        "status": "openenv_compatible", 
-        "env_id": "Cloud-Optimizer-Cracking",
-        "team": "Cracking"
-    }
+    return {"status": "openenv_compatible", "env_id": "Cloud-Optimizer-Cracking", "team": "Cracking"}
 
 @app.post("/reset")
 def reset_endpoint(task_id: str = "easy"):
@@ -77,7 +70,6 @@ def reset_endpoint(task_id: str = "easy"):
 
 @app.post("/step")
 def step_endpoint(action: int):
-    # Now the API just calls the class method!
     return env.step(action)
 
 @app.get("/grader")
