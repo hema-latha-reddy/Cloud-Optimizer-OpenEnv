@@ -13,6 +13,9 @@ COPY requirements.txt .
 # Increase timeout for pip to handle slow network connections during build
 RUN pip install --no-cache-dir --default-timeout=100 -r requirements.txt
 
+# Add this line specifically to make sure the yaml is inside the container
+COPY openenv.yaml .
+
 # Copy the rest of the app
 COPY . .
 
