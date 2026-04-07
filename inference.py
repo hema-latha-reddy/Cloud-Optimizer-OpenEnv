@@ -13,17 +13,19 @@ try:
 except ImportError:
     from app import env as cloud_env
 
-# --- CONFIGURATION ---
-API_KEY = os.getenv("HF_TOKEN") or os.getenv("API_KEY")
-API_BASE_URL = os.getenv("API_BASE_URL") or "https://router.huggingface.co/v1"
-MODEL_NAME = os.getenv("MODEL_NAME") or "Qwen/Qwen2.5-72B-Instruct"
+# --- CONFIGURATION (Checklist Compliant) ---
+# This checks both naming conventions to ensure your secret is found
+HF_TOKEN = os.getenv("HF_TOKEN") or os.getenv("HF_Token")
+
+# Defaults are set ONLY for Base URL and Model Name
+API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
+MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
 
 TASK_NAME = os.getenv("TASK_NAME", "easy")
 BENCHMARK = "cloud-optimizer-cracking"
 MAX_STEPS = 10
 SUCCESS_SCORE_THRESHOLD = 0.5 
 
-# Updated to the aggressive prompt that worked locally
 SYSTEM_PROMPT = textwrap.dedent(
     """
     You are an AI Cloud Controller. Goal: Keep latency BELOW 150ms.
@@ -37,6 +39,7 @@ SYSTEM_PROMPT = textwrap.dedent(
     """
 ).strip()
 
+# --- STRUCTURED LOGGING ---
 def log_start(task: str, env: str, model: str) -> None:
     print(f"[START] task={task} env={env} model={model}", flush=True)
 
@@ -49,6 +52,7 @@ def log_end(success: bool, steps: int, score: float, rewards: List[float]) -> No
     rewards_str = ",".join(f"{r:.2f}" for r in rewards)
     print(f"[END] success={str(success).lower()} steps={steps} score={score:.3f} rewards={rewards_str}", flush=True)
 
+# --- LLM INTERACTION ---
 def get_model_action(client: OpenAI, step: int, obs: dict, last_reward: float) -> int:
     user_prompt = f"Step: {step}\nObservation: {obs}\nLast Reward: {last_reward}\nAction (0/1/2):"
     try:
@@ -70,16 +74,25 @@ def get_model_action(client: OpenAI, step: int, obs: dict, last_reward: float) -
         print(f"[DEBUG] Model request failed: {exc}", flush=True)
         return 1
 
+# --- MAIN LOOP ---
 async def main() -> None:
-    client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+    # Initializing OpenAI client with checklist-compliant variables
+    client = OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN)
     
     rewards: List[float] = []
     steps_taken = 0
+    success = False
+    score = 0.0
     
     log_start(task=TASK_NAME, env=BENCHMARK, model=MODEL_NAME)
 
     try:
+        # Check if token exists
+        if not HF_TOKEN:
+            raise ValueError("HF_TOKEN is missing. Ensure it is set in Secrets.")
+
         obs_container = cloud_env.reset(TASK_NAME)
+        # Handle different return formats from reset
         obs = obs_container.get("observation", obs_container) if isinstance(obs_container, dict) else obs_container
         last_reward = 0.0
 
@@ -100,6 +113,9 @@ async def main() -> None:
 
         score = sum(rewards) / len(rewards) if rewards else 0.0
         success = score >= SUCCESS_SCORE_THRESHOLD
+
+    except Exception as e:
+        print(f"[DEBUG] Execution Error: {e}", flush=True)
 
     finally:
         log_end(success=success, steps=steps_taken, score=score, rewards=rewards)
