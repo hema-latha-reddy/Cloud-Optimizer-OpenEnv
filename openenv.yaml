@@ -1,17 +1,12 @@
 version: "1.0"
 env_id: "cloud-optimizer-cracking"
-description: "AI-driven cloud scaling environment to optimize latency vs server cost."
 
-# Explicitly defining the tasks
 tasks:
   - id: "easy"
-    description: "Static traffic at 100. Maintain low latency."
     grader_endpoint: "/grader"
   - id: "medium"
-    description: "Dynamic traffic (200-500). Requires active scaling."
     grader_endpoint: "/grader"
   - id: "hard"
-    description: "High traffic (1000). Stress test for the agent."
     grader_endpoint: "/grader"
 
 runtime:
@@ -20,4 +15,5 @@ runtime:
   endpoints:
     reset: "/reset"
     step: "/step"
-    grader: "/grader"  # <--- ADD THIS LINE HERE
+    grader: "/grader"
+    tasks: "/tasks"
