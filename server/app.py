@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 import random
 import uvicorn
 
@@ -25,7 +25,7 @@ class CloudEnv:
         return self._get_obs_dict()
 
     def _get_obs_dict(self):
-        # Latency increases as traffic rises and decreases as servers are added
+        # Latency logic: higher traffic/lower servers = higher latency
         latency = int((self.traffic / self.servers) * 10)
         return {
             "traffic": self.traffic,
@@ -45,26 +45,18 @@ class CloudEnv:
         # Simulate dynamic traffic for Medium/Hard tasks
         if self.task_id != "easy":
             self.traffic += random.randint(-50, 70) 
-            if self.traffic < 50: self.traffic = 50 # Floor for traffic
+            if self.traffic < 50: self.traffic = 50 
         
         obs = self._get_obs_dict()
         
-        # --- PHASE 3 CUSTOM REWARD LOGIC ---
+        # --- REWARD LOGIC ---
         reward = 0.0
-        
         if obs["latency"] < 150:
-            # Base reward for meeting the SLA (Service Level Agreement)
-            reward = 1.0
-            
-            # UNIQUE FEATURE: Efficiency Bonus
-            # If the AI keeps latency low with 5 or fewer servers, give extra points
+            reward = 1.0 # Base reward
             if obs["servers"] <= 5:
-                reward += 0.2 
-        
+                reward += 0.2 # Efficiency bonus
         elif obs["latency"] > 500:
-            # UNIQUE FEATURE: Critical Failure Penalty
-            # If the system is extremely slow, penalize the agent
-            reward = -0.5
+            reward = -0.5 # Penalty
             
         self.total_reward += reward
             
@@ -75,39 +67,52 @@ class CloudEnv:
             "info": {"step_count": self.step_count}
         }
 
-# Create the instance for direct Python imports (Phase 2 Requirement)
+# Create the instance for direct Python imports
 env = CloudEnv()
 
-# --- CORE ENDPOINTS (Phase 1 Requirement) ---
+# --- CORE ENDPOINTS ---
 
 @app.get("/")
 def home():
     return {
         "status": "openenv_compatible", 
         "env_id": "Cloud-Optimizer-Cracking",
-        "team": "Cracking",
-        "features": ["Efficiency Bonus", "Latency Penalty"]
+        "team": "Cracking"
+    }
+
+# NEW: Grader endpoint handles both GET and POST to be safe
+@app.get("/grader")
+@app.post("/grader")
+async def grader_endpoint(request: Request):
+    """
+    Returns the current evaluation score to the Meta/Scaler validator.
+    """
+    if env.step_count == 0: 
+        return {"score": 0.0, "status": "no_steps_completed"}
+    
+    # Calculate average performance
+    final_score = env.total_reward / env.step_count
+    return {
+        "score": round(final_score, 4), 
+        "steps": env.step_count,
+        "status": "active"
     }
 
 @app.post("/reset")
-def reset_endpoint(task_id: str = "easy"):
+async def reset_endpoint(request: Request):
+    # Handle optional task_id from JSON or query params
+    data = await request.json() if await request.body() else {}
+    task_id = data.get("task_id", "easy")
     observation = env.reset(task_id)
-    return {"observation": observation, "message": "Environment Reset"}
+    return {"observation": observation, "message": f"Environment Reset for {task_id}"}
 
 @app.post("/step")
-def step_endpoint(action: int):
+async def step_endpoint(request: Request):
+    data = await request.json()
+    action = data.get("action", 1)
     return env.step(action)
 
-@app.get("/grader")
-def grader():
-    if env.step_count == 0: 
-        return {"score": 0.0}
-    # Calculate average reward per step
-    final_score = env.total_reward / env.step_count
-    return {"score": round(final_score, 2), "steps": env.step_count}
-
 def main():
-    # Standard Hugging Face port 7860
     uvicorn.run(app, host="0.0.0.0", port=7860)
 
 if __name__ == "__main__":
