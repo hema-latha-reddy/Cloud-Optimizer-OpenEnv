@@ -2,6 +2,29 @@ from fastapi import FastAPI, Request
 import random
 import uvicorn
 
+# --- ADD THESE GRADER CLASSES AT THE TOP ---
+
+class BaseGrader:
+    def __init__(self):
+        pass
+    def grade(self, env):
+        # Access the reward from the environment instance
+        if env.step_count == 0:
+            return 0.0
+        return round(env.total_reward / env.step_count, 4)
+
+class EasyGrader(BaseGrader):
+    pass
+
+class MediumGrader(BaseGrader):
+    pass
+
+class HardGrader(BaseGrader):
+    pass
+
+# --- REST OF YOUR APP.PY CONTINUES BELOW ---
+# Keep your FastAPI app and CloudEnv class exactly as they are.
+
 app = FastAPI()
 
 # --- THE ENVIRONMENT STATE ---
