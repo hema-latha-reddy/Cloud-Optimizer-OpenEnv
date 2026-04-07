@@ -1,18 +1,23 @@
-# Use Python 3.10 as the base
+# Use a very standard, cached base image
 FROM python:3.10-slim
 
-# Set the working directory
+# Set environment variables to prevent Python from buffering logs
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
 WORKDIR /app
 
-# Copy the requirements file and install dependencies
+# Copy requirements first
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the application code
+# Increase timeout for pip to handle slow network connections during build
+RUN pip install --no-cache-dir --default-timeout=100 -r requirements.txt
+
+# Copy the rest of the app
 COPY . .
 
-# Expose the port FastAPI runs on
+# Expose the standard port
 EXPOSE 7860
 
-# Command to run the application using Uvicorn
+# Use the command that was working for you in Phase 1
 CMD ["python", "-m", "server.app"]
