@@ -16,4 +16,3 @@ runtime:
     reset: "/reset"
     step: "/step"
     grader: "/grader"
-    tasks: "/tasks"
