@@ -84,5 +84,13 @@ async def step_endpoint(request: Request):
         action = 1
     return env.step(action)
 
-if __name__ == "__main__":
+# 1. THE MAIN FUNCTION MUST BE AT THE TOP LEVEL
+def main():
+    """
+    This function must be present and callable by the validator.
+    """
     uvicorn.run(app, host="0.0.0.0", port=7860)
+
+# 2. THE BOOTSTRAP BLOCK MUST BE EXACTLY THIS
+if __name__ == "__main__":
+    main()
