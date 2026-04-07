@@ -3,11 +3,11 @@ env_id: "cloud-optimizer-cracking"
 
 tasks:
   - id: "easy"
-    grader_endpoint: "/grader"
+    grader: "server.app:EasyGrader"
   - id: "medium"
-    grader_endpoint: "/grader"
+    grader: "server.app:MediumGrader"
   - id: "hard"
-    grader_endpoint: "/grader"
+    grader: "server.app:HardGrader"
 
 runtime:
   type: "http"
@@ -15,4 +15,3 @@ runtime:
   endpoints:
     reset: "/reset"
     step: "/step"
-    grader: "/grader"
