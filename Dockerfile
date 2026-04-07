@@ -1,26 +1,23 @@
-# Use a very standard, cached base image
-FROM python:3.10-slim
+# We change from 'slim' to a more common version that is likely cached
+FROM python:3.10
 
-# Set environment variables to prevent Python from buffering logs
+# Prevent Python from buffering logs
 ENV PYTHONUNBUFFERED=1
-ENV PYTHONDONTWRITEBYTECODE=1
 
 WORKDIR /app
 
-# Copy requirements first
+# Copy and install dependencies first
 COPY requirements.txt .
-
-# Increase timeout for pip to handle slow network connections during build
 RUN pip install --no-cache-dir --default-timeout=100 -r requirements.txt
 
-# Add this line specifically to make sure the yaml is inside the container
+# Copy the yaml file (Crucial for the "Not enough tasks" error)
 COPY openenv.yaml .
 
-# Copy the rest of the app
+# Copy the rest of the application
 COPY . .
 
-# Expose the standard port
+# Expose port
 EXPOSE 7860
 
-# Use the command that was working for you in Phase 1
+# Use the python module command you know works
 CMD ["python", "-m", "server.app"]
