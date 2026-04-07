@@ -1,26 +1,24 @@
-version: "1.0.0"
-env_id: "Cloud-Optimizer-Cracking"
-name: "Cloud-Optimizer-Cracking"
-# CHANGE THIS LINE:
-entry_point: "server.app:main" 
+version: "1.0"
+env_id: "cloud-optimizer-cracking"
+description: "AI-driven cloud scaling environment to optimize latency vs server cost."
 
-observation_space:
-  traffic: "int"
-  servers: "int"
-  latency: "int"
-
-action_space:
-  type: "discrete"
-  values: [0, 1, 2]
-
-# ADD YOUR TASKS (Required for Phase 1)
+# This is what the validator is looking for!
 tasks:
   - id: "easy"
-    difficulty: "easy"
-    description: "Maintain stability under low traffic."
+    description: "Static traffic at 100. Maintain low latency."
+    grader_endpoint: "/grader"
+  
   - id: "medium"
-    difficulty: "medium"
-    description: "Handle random traffic spikes."
+    description: "Dynamic traffic (200-500). Requires active scaling."
+    grader_endpoint: "/grader"
+
   - id: "hard"
-    difficulty: "hard"
-    description: "Manage a high-load scale crisis."
+    description: "High traffic (1000). Stress test for the agent."
+    grader_endpoint: "/grader"
+
+runtime:
+  type: "http"
+  port: 7860
+  endpoints:
+    reset: "/reset"
+    step: "/step"
