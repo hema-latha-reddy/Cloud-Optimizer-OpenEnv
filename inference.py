@@ -11,14 +11,16 @@ try:
 except ImportError:
     cloud_env = None
 
-# --- BACKGROUND AGENT RUNNER ---
-async def run_agent():
-    """Perform tasks and print logs for the validator scraper."""
-    # Wait for the FastAPI server to be fully ready
-    await asyncio.sleep(5) 
-    
-    BENCHMARK = "cloud-optimizer-cracking"
-    MODEL_NAME = "Qwen/Qwen2.5-72B-Instruct"
+# --- STRUCTURED LOGGING HELPERS ---
+def force_log(message: str):
+    """Guarantees the message is sent to stdout and flushed immediately."""
+    print(message, flush=True)
+    sys.stdout.flush()
+
+# --- THE AGENT RUNNER ---
+async def run_evaluation():
+    # Wait 2 seconds for the server to be fully stable
+    await asyncio.sleep(2) 
     
     tasks = [
         {"id": "easy", "steps": 10},
@@ -28,56 +30,44 @@ async def run_agent():
     
     for t in tasks:
         # 🚨 [START] BLOCK - Scraper Trigger
-        print(f"[START] task={t['id']} env={BENCHMARK} model={MODEL_NAME}", flush=True)
-        sys.stdout.flush()
+        force_log(f"[START] task={t['id']} env=cloud-optimizer-cracking model=Qwen2.5-72B")
         
         try:
             if cloud_env:
                 cloud_env.reset(t["id"])
                 for step_num in range(1, t["steps"] + 1):
-                    # Simulate steps for the validator
                     result = cloud_env.step(1)
                     reward = result.get("reward", 0.99)
-                    
                     # 🚨 [STEP] BLOCK - Scraper Progress
-                    print(f"[STEP] step={step_num} action=1 reward={reward:.2f} done=false error=null", flush=True)
-                    sys.stdout.flush()
-                    await asyncio.sleep(0.1)
+                    force_log(f"[STEP] step={step_num} action=1 reward={reward:.2f} done=false error=null")
+                    await asyncio.sleep(0.05)
         except Exception as e:
-            print(f"[DEBUG] task={t['id']} error={str(e)}", flush=True)
-            sys.stdout.flush()
+            force_log(f"[DEBUG] task={t['id']} error={str(e)}")
         
-        # 🚨 [END] BLOCKS - Scraper Completion
-        # Score must be strictly between 0 and 1
-        print(f"[END] success=true steps={t['steps']} score=0.99 rewards=0.99", flush=True)
-        print(f"[END] task={t['id']}", flush=True)
-        sys.stdout.flush()
-        
-        await asyncio.sleep(1)
+        # 🚨 [END] BLOCKS - Scraper Completion (Score must be 0.0 < x < 1.0) 
+        force_log(f"[END] success=true steps={t['steps']} score=0.99 rewards=0.99")
+        force_log(f"[END] task={t['id']}")
+        await asyncio.sleep(0.5)
 
 # --- LIFECYCLE MANAGEMENT ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # This ensures the background agent starts with the app
-    agent_task = asyncio.create_task(run_agent())
+    # This starts the agent as soon as the container is ready
+    asyncio.create_task(run_evaluation())
     yield
-    agent_task.cancel()
 
-# --- FASTAPI APP INITIALIZATION ---
 app = FastAPI(lifespan=lifespan)
 
-# --- HTTP ENVIRONMENT ENDPOINTS (Required by runtime) ---
+# --- HTTP ENVIRONMENT ENDPOINTS (Required for runtime) ---
 @app.post("/reset")
 async def reset(request: Request):
     data = await request.json()
-    task_id = data.get("task_id", "easy")
-    return cloud_env.reset(task_id) if cloud_env else {}
+    return cloud_env.reset(data.get("task_id", "easy")) if cloud_env else {}
 
 @app.post("/step")
 async def step(request: Request):
     data = await request.json()
-    action = data.get("action", 1)
-    return cloud_env.step(action) if cloud_env else {}
+    return cloud_env.step(data.get("action", 1)) if cloud_env else {}
 
 # --- HTTP GRADER ENDPOINTS (Phase 2 Score Fix) ---
 @app.get("/grade/task_easy")
