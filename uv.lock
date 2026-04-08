@@ -1,1 +1,20 @@
-# Generated lockfile placeholder
+version = 1
+revision = 1
+requires-python = ">=3.10"
+
+[[package]]
+name = "cloud-optimizer-cracking"
+version = "0.1.0"
+source = { virtual = "." }
+dependencies = [
+    { name = "fastapi" },
+    { name = "openenv-core" },
+    { name = "pydantic" },
+    { name = "python-multipart" },
+    { name = "requests" },
+    { name = "uvicorn" },
+]
+
+[tool.uv]
+managed = true
+package = true
