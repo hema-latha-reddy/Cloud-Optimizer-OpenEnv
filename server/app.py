@@ -10,6 +10,10 @@ from environment import CloudEnv
 app = FastAPI()
 env = CloudEnv()
 
+@app.get("/")
+def read_root():
+    return {"status": "ok", "message": "Cloud Optimizer API is running"}
+
 @app.post("/reset")
 async def reset(request: Request):
     try:
