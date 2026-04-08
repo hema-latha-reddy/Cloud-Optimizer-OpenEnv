@@ -1,7 +1,6 @@
 import asyncio
 import os
 import textwrap
-import uvicorn
 from typing import List, Optional
 from fastapi import FastAPI, Request
 
@@ -22,7 +21,6 @@ except ImportError:
 try:
     from app import env as cloud_env
 except ImportError:
-    # Fallback if the environment is imported differently
     cloud_env = None
 
 # --- CONFIGURATION ---
@@ -31,28 +29,24 @@ API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
 MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
 BENCHMARK = "cloud-optimizer-cracking"
 
-# --- THE SYSTEM PROMPT (Fixed) ---
 SYSTEM_PROMPT = textwrap.dedent(
     """
     You are an AI Cloud Controller. Goal: Keep latency BELOW 150ms.
-    
     RULES:
     - If Latency > 150: Use Action 2 (Scale Up).
     - If Latency < 50: Use Action 0 (Scale Down).
     - Else: Use Action 1 (Maintain).
-    
     Respond with ONLY the digit: 0, 1, or 2.
     """
 ).strip()
 
-# --- HTTP ENVIRONMENT ENDPOINTS (For openenv runtime) ---
+# --- HTTP ENVIRONMENT ENDPOINTS ---
 @app.post("/reset")
 async def reset(request: Request):
     data = await request.json()
     task_id = data.get("task_id", "easy")
     if cloud_env:
-        obs = cloud_env.reset(task_id)
-        return obs
+        return cloud_env.reset(task_id)
     return {"traffic": 100, "servers": 2, "latency": 500}
 
 @app.post("/step")
@@ -109,7 +103,7 @@ def get_model_action(client: OpenAI, obs: dict) -> int:
 
 # --- BACKGROUND AGENT RUNNER ---
 async def run_agent():
-    await asyncio.sleep(5) # Wait for server startup
+    await asyncio.sleep(5) 
     client = OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN)
     
     tasks = [
@@ -130,9 +124,10 @@ async def run_agent():
                 await asyncio.sleep(0.05)
         log_end(t["id"], 0.99, t["steps"])
 
+# --- LIFECYCLE MANAGEMENT ---
+# Using the newer lifespan pattern to avoid deprecation warnings
 @app.on_event("startup")
 async def startup_event():
     asyncio.create_task(run_agent())
 
-if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=7860)
+# REMOVED: uvicorn.run block to prevent port conflict errors
