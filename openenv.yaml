@@ -1,25 +1,27 @@
-version: "1.0"
-env_id: "cloud-optimizer-cracking"
-
-tasks:
-  - id: "easy"
-    difficulty: "easy"
-    max_steps: 10
-    grader: "environment.easy_grader"
-
-  - id: "medium"
-    difficulty: "medium"
-    max_steps: 15
-    grader: "environment.medium_grader"
-
-  - id: "hard"
-    difficulty: "hard"
-    max_steps: 20
-    grader: "environment.hard_grader"
-
-runtime:
+spec_version: 1
+name: cloud-optimizer-cracking
+version: "1.0.0"
+type: space
+runtime: 
   type: "http"
   port: 7860
   endpoints:
     reset: "/reset"
     step: "/step"
+app: inference:app
+
+tasks:
+  - id: "easy"
+    difficulty: "easy"
+    max_steps: 10
+    grader: "/grade/task_easy"
+
+  - id: "medium"
+    difficulty: "medium"
+    max_steps: 15
+    grader: "/grade/task_medium"
+
+  - id: "hard"
+    difficulty: "hard"
+    max_steps: 20
+    grader: "/grade/task_hard"
