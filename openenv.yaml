@@ -2,26 +2,12 @@ version: "1.0"
 env_id: "cloud-optimizer-cracking"
 
 tasks:
-  - id: "task-easy"
-    difficulty: "easy"
-    max_steps: 10
-    grader:
-      type: "llm"
-      prompt_template: "Score the cloud optimization decision 0.0 to 1.0 based on latency and server count."
-
-  - id: "task-medium"
-    difficulty: "medium"
-    max_steps: 15
-    grader:
-      type: "llm"
-      prompt_template: "Score the cloud optimization decision 0.0 to 1.0 based on efficiency."
-
-  - id: "task-hard"
-    difficulty: "hard"
-    max_steps: 20
-    grader:
-      type: "llm"
-      prompt_template: "Score the cloud optimization decision 0.0 to 1.0 based on stress handling."
+  - id: "easy"
+    grader: { type: "llm", prompt_template: "Score 0-1" }
+  - id: "medium"
+    grader: { type: "llm", prompt_template: "Score 0-1" }
+  - id: "hard"
+    grader: { type: "llm", prompt_template: "Score 0-1" }
 
 runtime:
   type: "http"
