@@ -1,17 +1,24 @@
-version: "1.0"
-env_id: "cloud-optimizer-cracking"
+env_id: cloud-optimizer-cracking
+version: "1.0.0"
 
 tasks:
-  - id: "easy"
-    grader: { type: "llm", prompt_template: "Score 0-1" }
-  - id: "medium"
-    grader: { type: "llm", prompt_template: "Score 0-1" }
-  - id: "hard"
-    grader: { type: "llm", prompt_template: "Score 0-1" }
+  - id: easy
+    difficulty: easy
+    max_steps: 10
+    grader:
+      type: llm
+      prompt_template: "Score the cloud optimization performance 0.0 to 1.0..."
 
-runtime:
-  type: "http"
-  port: 7860
-  endpoints:
-    reset: "/reset"
-    step: "/step"
+  - id: medium
+    difficulty: medium
+    max_steps: 15
+    grader:
+      type: llm
+      prompt_template: "Score the cloud optimization performance 0.0 to 1.0..."
+
+  - id: hard
+    difficulty: hard
+    max_steps: 20
+    grader:
+      type: llm
+      prompt_template: "Score the cloud optimization performance 0.0 to 1.0..."
