@@ -1,0 +1,8 @@
+{
+  "env_id": "cloud-optimizer-cracking",
+  "tasks": [
+    {"id": "easy", "difficulty": "easy", "max_steps": 10},
+    {"id": "medium", "difficulty": "medium", "max_steps": 15},
+    {"id": "hard", "difficulty": "hard", "max_steps": 20}
+  ]
+}
