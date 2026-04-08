@@ -43,7 +43,6 @@ SYSTEM_PROMPT = textwrap.dedent(
 
 # --- STRUCTURED LOGGING ---
 def log_start(task: str, env: str, model: str) -> None:
-    # CRITICAL: This is the exact string the scraper looks for 
     print(f"[START] task={task} env={env} model={model}", flush=True)
 
 def log_step(step: int, action: str, reward: float, done: bool, error: Optional[str]) -> None:
@@ -51,8 +50,8 @@ def log_step(step: int, action: str, reward: float, done: bool, error: Optional[
 
 def log_end(task: str, success: bool, steps: int, score: float, rewards: List[float]) -> None:
     rewards_str = ",".join(f"{r:.2f}" for r in rewards)
+    # The scraper reads this 'score' value
     print(f"[END] success={str(success).lower()} steps={steps} score={score:.3f} rewards={rewards_str}", flush=True)
-    # Explicit task closure for the scraper
     print(f"[END] task={task}", flush=True)
 
 # --- LLM INTERACTION ---
@@ -80,7 +79,6 @@ def get_model_action(client: OpenAI, step: int, obs: dict, last_reward: float) -
 async def run_single_task(client: OpenAI, task_id: str, max_steps: int) -> None:
     rewards, steps_taken, success, score = [], 0, False, 0.0
     
-    # 1. Start Log (Scraper Trigger)
     log_start(task=task_id, env=BENCHMARK, model=MODEL_NAME)
 
     try:
@@ -106,20 +104,28 @@ async def run_single_task(client: OpenAI, task_id: str, max_steps: int) -> None:
             log_step(step=step, action=str(action), reward=reward, done=done, error=None)
             if done: break
 
-        score = sum(rewards) / len(rewards) if rewards else 0.0
+        # --- SCORE CALCULATION & RANGE FIX ---
+        raw_score = sum(rewards) / len(rewards) if rewards else 0.0
+        
+        # 🚨 CRITICAL FIX: Ensure score is strictly 0.0 < score < 1.0
+        if raw_score >= 1.0:
+            score = 0.99
+        elif raw_score <= 0.0:
+            score = 0.01
+        else:
+            score = round(raw_score, 3)
+            
         success = score >= SUCCESS_SCORE_THRESHOLD
 
     except Exception as e:
         print(f"[DEBUG] Task {task_id} failed: {e}", flush=True)
     finally:
-        # 2. End Log (Scraper Trigger)
         log_end(task=task_id, success=success, steps=steps_taken, score=score, rewards=rewards)
 
-# --- MAIN LOOP (3-Task Discovery Fix) ---
+# --- MAIN LOOP ---
 async def main() -> None:
     client = OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN)
     
-    # Define tasks with their specific step limits from YAML 
     all_tasks = [
         {"id": "easy", "steps": 10},
         {"id": "medium", "steps": 15},
