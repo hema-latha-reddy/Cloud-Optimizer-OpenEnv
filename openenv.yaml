@@ -1,5 +1,5 @@
-version: "1.0"
 env_id: "cloud-optimizer-cracking"
+version: "1.0.0"
 
 tasks:
   - id: "easy"
@@ -7,21 +7,19 @@ tasks:
     max_steps: 10
     grader:
       type: "llm"
-      prompt_template: "Score the cloud optimization decision 0.0 to 1.0 based on latency and server count. High latency or too many servers should result in a lower score."
-
+      prompt_template: "Score 0.0 to 1.0 based on latency and server count."
   - id: "medium"
     difficulty: "medium"
+    max_steps: 15
+    grader:
+      type: "llm"
+      prompt_template: "Score 0.0 to 1.0. Efficiency is key."
+  - id: "hard"
+    difficulty: "hard"
     max_steps: 20
     grader:
       type: "llm"
-      prompt_template: "Score the cloud optimization decision 0.0 to 1.0. This is a medium difficulty task with dynamic traffic. Efficiency is key."
-
-  - id: "hard"
-    difficulty: "hard"
-    max_steps: 30
-    grader:
-      type: "llm"
-      prompt_template: "Score the cloud optimization decision 0.0 to 1.0. This is a stress test. The agent must handle high traffic without crashing latency."
+      prompt_template: "Score 0.0 to 1.0. Stress test handling."
 
 runtime:
   type: "http"
