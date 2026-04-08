@@ -82,15 +82,20 @@ async def grader_endpoint(request: Request):
     }
 
 @app.post("/reset")
-async def reset_endpoint(request: Request):
-    try:
-        body = await request.json()
-        task_id = body.get("task_id", "easy")
-    except:
-        task_id = "easy"
-    obs = env.reset(task_id)
-    return {"observation": obs, "task_id": task_id, "status": "ready"}
-
+async def reset(request: Request):
+    data = await request.json()
+    # The validator sends 'task_id', NOT 'id'
+    task_id = data.get("task_id") 
+    
+    # Map the IDs to your internal logic
+    valid_tasks = ["task-easy", "task-medium", "task-hard"]
+    
+    if task_id not in valid_tasks:
+        # If the validator sends something else, default to easy so it doesn't crash
+        task_id = "task-easy"
+        
+    observation = env.reset(task_id)
+    return observation
 @app.post("/step")
 async def step_endpoint(request: Request):
     try:
