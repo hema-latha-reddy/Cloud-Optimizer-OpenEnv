@@ -1,0 +1,8 @@
+{
+  "version": "1.0",
+  "tasks": {
+    "easy": { "grader_type": "llm" },
+    "medium": { "grader_type": "llm" },
+    "hard": { "grader_type": "llm" }
+  }
+}
