@@ -37,7 +37,7 @@ dev = [
 [project.scripts]
 # Server entry point - enables running via: uv run --project . server
 # or: python -m cloud_server.server.app
-server = "cloud-optimizer-openenv.cloud_server.app:main"
+server = "cloud_server.app:main"
 
 [tool.setuptools]
 include-package-data = true
