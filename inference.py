@@ -64,7 +64,7 @@ def log_end(success: bool, steps: int, score: float, rewards: List[float]):
     print(f"[END] success={str(success).lower()} steps={steps} score={score:.2f} rewards={rewards_str}", flush=True)
 
 # --- CORE INFERENCE LOGIC ---
-# HF_TOKEN=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
+
 async def main():
     client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
 
