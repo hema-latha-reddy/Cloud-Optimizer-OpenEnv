@@ -1,25 +1,45 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree.
+
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools>=45", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "cloud-optimizer-cracking"
+name = "openenv-cloud_server"
 version = "0.1.0"
-description = "Cloud infrastructure scaling environment"
-readme = "README.md"
-requires-python = ">=3.10"
+description = "Cloud Server environment for OpenEnv"
+requires-python = "==3.12.*"
 dependencies = [
-    "openenv-core>=0.2.0",
-    "fastapi",
-    "uvicorn",
-    "pydantic",
-    "requests",
-    "python-multipart"
+    # Core OpenEnv runtime (provides FastAPI server + HTTP client types)
+    # install from github
+    # "openenv-core[core] @ git+https://github.com/meta-pytorch/OpenEnv.git",
+    "openenv-core[core]>=0.2.2",
+    # Environment-specific dependencies
+    # Add all dependencies needed for your environment here
+    # Examples:
+    # "numpy>=1.19.0",
+    # "torch>=2.0.0",
+    # "gymnasium>=0.29.0",
+    # "openspiel>=1.0.0",
+    # "smolagents>=1.22.0,<2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.0.0",
 ]
 
 [project.scripts]
-server = "server.app:main"
+# Server entry point - enables running via: uv run --project . server
+# or: python -m cloud_server.server.app
+server = "cloud-optimizer-openenv.cloud_server.app:main"
 
-[tool.uv]
-package = true
-managed = true
+[tool.setuptools]
+include-package-data = true
+packages = ["cloud_server", "cloud_server.server"]
+package-dir = { "cloud_server" = ".", "cloud_server.server" = "server" }

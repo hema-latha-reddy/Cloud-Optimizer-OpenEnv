@@ -1,27 +1,7 @@
 spec_version: 1
-name: cloud-optimizer-cracking
-version: "1.0.0"
+name: cloud_server
 type: space
-runtime: 
-  type: "http"
-  port: 7860
-  endpoints:
-    reset: "/reset"
-    step: "/step"
-app: inference:app
+runtime: fastapi
+app: server.app:app
+port: 8000
 
-tasks:
-  - id: "easy"
-    difficulty: "easy"
-    max_steps: 10
-    grader: "/grade/task_easy"
-
-  - id: "medium"
-    difficulty: "medium"
-    max_steps: 15
-    grader: "/grade/task_medium"
-
-  - id: "hard"
-    difficulty: "hard"
-    max_steps: 20
-    grader: "/grade/task_hard"

@@ -2,119 +2,123 @@ import asyncio
 import os
 import sys
 import textwrap
-from fastapi import FastAPI, Request
+from typing import List, Optional
 from openai import OpenAI
+# 1. Add the root directory to the path
+current_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(current_dir)
 
-# --- FASTAPI APP FOR THE VALIDATOR ---
-app = FastAPI()
-
-# --- CONFIGURATION ---
-# --- CONFIGURATION ---
-# Handles the case-sensitive "HF_Token" you created in Space Secrets
-API_KEY = os.getenv("HF_Token") or os.getenv("HF_TOKEN") or os.getenv("API_KEY")
-
-API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
-MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
-BENCHMARK = "cloud-optimizer-cracking"
-# --- THE AGENT RUNNER ---
-async def run_evaluation():
-    # Wait for server stability
-    await asyncio.sleep(5) 
+# 2. Specific Imports based on your file tree
+try:
+    # 1. Import the Action model from models.py (in your root)
+    from models import CloudServerAction
     
-    client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+    # 2. Import the Environment class from the file INSIDE the server folder
+    # Based on your screenshot, the file is server/cloud_server_environment.py
+    from server.cloud_server_environment import CloudServerEnvironment
     
-    # Try to import your environment
+    print("SUCCESS: Environment loaded correctly.", file=sys.stderr)
+except ImportError as e:
+    print(f"DEBUG: Failed to find in 'server' folder. Trying root 'environment.py'...")
     try:
-        from app import env as cloud_env
+        # Fallback: Maybe your class is actually in the root environment.py?
+        from environment import CloudEnv as CloudServerEnvironment
+        from models import CloudServerAction
     except ImportError:
-        cloud_env = None
+        print(f"CRITICAL: Could not find environment files. Error: {e}")
+        sys.exit(1)
+# 1. IMPORT YOUR MODELS AND ENVIRONMENT
+# Based on your reference and new structure
+#try:
+ #   from models import CloudServerAction
+  #  from server.cloud_server_environment import CloudServerEnvironment
+#except ImportError:
+    # Fallback for local testing or different root setups
+ #   from cloud_server.models import CloudServerAction
+  #  from cloud_server.server.cloud_server_environment import CloudServerEnvironment
 
-    tasks = [
-        {"id": "easy", "limit": 10},
-        {"id": "medium", "limit": 15},
-        {"id": "hard", "limit": 20}
-    ]
+# --- CONFIGURATION ---
+API_KEY = os.getenv("HF_TOKEN") or os.getenv("API_KEY")
+API_BASE_URL = os.getenv("API_BASE_URL") or "https://router.huggingface.co/v1"
+MODEL_NAME = os.getenv("MODEL_NAME") or "Qwen/Qwen2.5-72B-Instruct"
+BENCHMARK = os.getenv("BENCHMARK", "cloud-optimizer-cracking")
+MAX_STEPS = 8
 
-    for t in tasks:
-        task_id = t["id"]
-        limit = t["limit"]
+# --- HELPER LOGGERS (Standardized) ---
+def log_start(task: str):
+    print(f"[START] task={task} env={BENCHMARK} model={MODEL_NAME}", flush=True)
+
+def log_step(step: int, action: int, reward: float, done: bool):
+    print(f"[STEP] step={step} action={action} reward={reward:.2f} done={str(done).lower()} error=null", flush=True)
+
+def log_end(success: bool, steps: int, score: float, rewards: List[float]):
+    rewards_str = ",".join(f"{r:.2f}" for r in rewards)
+    print(f"[END] success={str(success).lower()} steps={steps} score={score:.3f} rewards={rewards_str}", flush=True)
+
+# --- CORE INFERENCE LOGIC ---
+async def main():
+    client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+    env = CloudServerEnvironment()
+    
+    # The 3 tasks required for Round 1
+    tasks = ["easy", "medium", "hard"]
+
+    for task_id in tasks:
+        history = []
         rewards = []
+        steps_taken = 0
         
-        # 1. [START] LINE
-        print(f"[START] task={task_id} env={BENCHMARK} model={MODEL_NAME}", flush=True)
-        sys.stdout.flush()
+        log_start(task_id)
 
         try:
-            obs = cloud_env.reset(task_id) if cloud_env else {"latency": 150}
-            
-            for step in range(1, limit + 1):
-                # Your LLM Interaction loop
+            # Reset the environment for the specific task
+            obs = env.reset(task_id=task_id)
+            done = False
+
+            for step in range(1, MAX_STEPS + 1):
+                steps_taken = step
+                
+                # LLM Interaction
+                prompt = f"Current Cloud State: {obs}. You can: 0 (Decrease), 1 (Maintain), 2 (Increase). Return ONLY the number."
                 completion = client.chat.completions.create(
                     model=MODEL_NAME,
                     messages=[
-                        {"role": "system", "content": "You are a cloud controller. Respond with 0, 1, or 2."},
-                        {"role": "user", "content": f"Current Observation: {obs}"},
+                        {"role": "system", "content": "You are a cloud resource optimizer. Output only the integer 0, 1, or 2."},
+                        {"role": "user", "content": prompt}
                     ],
-                    max_tokens=10
+                    max_tokens=5,
+                    temperature=0.0 # Keep it deterministic
                 )
                 
-                # Simple logic to extract action
                 res_text = (completion.choices[0].message.content or "1").strip()
-                action = int(res_text[0]) if res_text[0] in ["0", "1", "2"] else 1
+                # Get the first available digit
+                action_val = int(next((s for s in res_text if s in "012"), 1))
                 
-                # 2. INTERACT WITH ENV
-                if cloud_env:
-                    result = cloud_env.step(action)
-                    obs = result.get("observation", obs)
-                    reward = result.get("reward", 0.99)
-                    done = result.get("done", False)
-                else:
-                    reward, done = 0.99, False
+                # Execute step using the Typed Action
+                result = env.step(CloudServerAction(action=action_val))
+                
+                # Extract results from the OpenEnv result object
+                reward = float(result.reward or 0.0)
+                done = bool(result.done)
+                obs = result.observation
                 
                 rewards.append(reward)
-                
-                # 3. [STEP] LINE (Must be exactly this format)
-                print(f"[STEP] step={step} action={action} reward={reward:.2f} done={str(done).lower()} error=null", flush=True)
-                sys.stdout.flush()
-                
-                if done: break
-                await asyncio.sleep(0.05)
+                log_step(step, action_val, reward, done)
 
-            # Calculate Final Score
-            score = sum(rewards) / len(rewards) if rewards else 0.0
-            score = min(max(score, 0.01), 0.99) # Clamp strictly between 0 and 1
-            
-            # 4. [END] LINE
-            rewards_str = ",".join(f"{r:.2f}" for r in rewards)
-            print(f"[END] success=true steps={len(rewards)} score={score:.2f} rewards={rewards_str}", flush=True)
-            print(f"[END] task={task_id}", flush=True)
-            sys.stdout.flush()
+                if done:
+                    break
+                await asyncio.sleep(0.01)
+
+            # Final metrics
+            final_score = sum(rewards) / len(rewards) if rewards else 0.0
+            is_success = final_score > 0.1 # Threshold for passing
+            log_end(is_success, steps_taken, final_score, rewards)
 
         except Exception as e:
-            print(f"[DEBUG] task={task_id} failed: {e}", flush=True)
+            # Errors to stderr so they don't break the validator
+            sys.stderr.write(f"Task {task_id} failed: {e}\n")
+            # Ensure an [END] block is still printed if the validator expects it
+            log_end(False, steps_taken, 0.0, rewards)
 
-# --- FASTAPI WRAPPERS (Required for Phase 2 Deep Validation) ---
-@app.on_event("startup")
-async def startup_event():
-    asyncio.create_task(run_evaluation())
-
-@app.post("/reset")
-async def reset(request: Request):
-    data = await request.json()
-    from app import env as cloud_env
-    return cloud_env.reset(data.get("task_id", "easy")) if cloud_env else {}
-
-@app.post("/step")
-async def step(request: Request):
-    data = await request.json()
-    from app import env as cloud_env
-    return cloud_env.step(data.get("action", 1)) if cloud_env else {}
-
-@app.get("/grade/task_easy")
-def grade_easy(): return {"score": 0.99, "reward": 0.99}
-
-@app.get("/grade/task_medium")
-def grade_medium(): return {"score": 0.99, "reward": 0.99}
-
-@app.get("/grade/task_hard")
-def grade_hard(): return {"score": 0.99, "reward": 0.99}
+if __name__ == "__main__":
+    asyncio.run(main())
