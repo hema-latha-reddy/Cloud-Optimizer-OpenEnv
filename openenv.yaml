@@ -1,5 +1,5 @@
 spec_version: 1
-name: cloud_server
+name: cloud_server_new
 type: space
 runtime: fastapi
 app: server.app:app
