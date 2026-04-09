@@ -59,69 +59,75 @@ class CloudServerEnvironment(Environment):
         self.task_id = clean_id if clean_id in self.available_tasks else "easy"
         
         self.servers = 2
-        self.step_count = 0
+        self._state.step_count = 0 # Ensure internal state reset
         self.total_reward = 0.0
         
-        # 2. Logic based on the task difficulty
+        # 2. Logic based on the task difficulty (The Grader logic)
         if self.task_id == "easy":
             self.traffic = 100
         elif self.task_id == "medium":
-            self.traffic = random.randint(200, 500)
+            # Medium uses range to test adaptability
+            self.traffic = random.randint(300, 500)
         else:
+            # Hard uses high stress load
             self.traffic = 1000
         
         # 3. Calculate latency (using your logic)
         latency = int((self.traffic / self.servers) * 10)
 
-        # 4. Return the Observation with ALL required fields (including message) 
+        # 4. Return the Observation with ALL required fields
         return CloudServerObservation(
-            traffic=str(self.traffic),
-            servers=str(self.servers),
-            latency=str(latency),
-            message=f"Environment reset for task: {self.task_id}",
-            reward = 1.0 if latency < 200 else 0.0
+            traffic=int(self.traffic),
+            servers=int(self.servers),
+            latency=int(latency),
+            message=f"Environment reset for task: {self.task_id}"
         )
 
-    def step(self, action: CloudServerAction) -> CloudServerObservation:  # type: ignore[override]
-        """
-        Execute a step in the environment.
-
-        Args:
-            action: CloudServerAction containing the message to echo
-
-        Returns:
-            CloudServerObservation with the current state
-        """
+    def step(self, action: CloudServerAction) -> CloudServerObservation:
         self._state.step_count += 1
+        action_val = action.action
 
-        if action == 2: 
+        # 1. Scaling Logic (Existing)
+        if action_val == 2: 
             self.servers += 1
-        elif action == 0 and self.servers > 1: 
+        elif action_val == 0 and self.servers > 1: 
             self.servers -= 1
         
+        # 2. Traffic Logic (Existing)
         if self.task_id != "easy":
-            self.traffic += random.randint(-50, 70)
-            if self.traffic < 50: 
-                self.traffic = 50
+            self.traffic += random.randint(-30, 50)
+        if self.traffic < 50: 
+            self.traffic = 50
         
-        # Internal helper for observation (matches your logic)
+        # 3. Calculate Latency
         latency = int((self.traffic / self.servers) * 10)
-        obs_dict = {
-            "traffic": str(self.traffic),
-            "servers": str(self.servers),
-            "latency": latency
-        }
 
-        reward = 1.0 if obs_dict["latency"] < 200 else 0.0
-        self.total_reward += reward
+        # 4. UPDATED REWARD GRADER (Proportional)
+        # Perfect range: 100-300
+        if 100 <= latency <= 300:
+            reward_val = 1.0
+        # Acceptable range: 50-100 or 300-500
+        elif 50 <= latency <= 500:
+            reward_val = 0.5
+        # Everything else is a failure
+        else:
+            reward_val = 0.0
+            
+        self.total_reward += reward_val
         
-        return CloudServerObservation(
-            traffic=str(self.traffic),
-            servers=str(self.servers),
-            latency=str(latency),
-            message=f"Step {self._state.step_count} completed"
+        # 5. Create and Return Observation
+        obs = CloudServerObservation(
+            traffic=int(self.traffic),
+            servers=int(self.servers),
+            latency=int(latency),
+            message=f"Step {self._state.step_count}: Latency is {latency}"
         )
 
+        # Attach reward/done for the UI to see
+        obs.reward = float(reward_val)
+        obs.done = self._state.step_count >= 8
+        
+        return obs
     @property
     def state(self) -> State:
         """
@@ -131,5 +137,3 @@ class CloudServerEnvironment(Environment):
             Current State with episode_id and step_count
         """
         return self._state
-    
-    
