@@ -1,45 +1,46 @@
-# Copyright (c) Meta Platforms, Inc. and affiliates.
-# All rights reserved.
-#
-# This source code is licensed under the BSD-style license found in the
-# LICENSE file in the root directory of this source tree.
-
 [build-system]
-requires = ["setuptools>=45", "wheel"]
+requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "openenv-cloud_server"
-version = "0.1.0"
-description = "Cloud Server environment for OpenEnv"
-requires-python = "==3.12.*"
+name = "cloud-optimizer-env"
+version = "2.0.0"
+description = "Cloud server auto-scaling environment for AI agents"
+readme = "README.md"
+authors = [
+    {name = "Your Name", email = "your.email@example.com"}
+]
+license = {text = "MIT"}
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+requires-python = ">=3.9"
 dependencies = [
-    # Core OpenEnv runtime (provides FastAPI server + HTTP client types)
-    # install from github
-    # "openenv-core[core] @ git+https://github.com/meta-pytorch/OpenEnv.git",
-    "openenv-core[core]>=0.2.2",
-    # Environment-specific dependencies
-    # Add all dependencies needed for your environment here
-    # Examples:
-    # "numpy>=1.19.0",
-    # "torch>=2.0.0",
-    # "gymnasium>=0.29.0",
-    # "openspiel>=1.0.0",
-    # "smolagents>=1.22.0,<2",
+    "openenv>=0.1.0",
+    "fastapi>=0.100.0",
+    "uvicorn>=0.23.0",
+    "pydantic>=2.0.0",
+    "openai>=1.0.0",
+    "httpx>=0.24.0",
 ]
 
-[project.optional-dependencies]
-dev = [
-    "pytest>=8.0.0",
-    "pytest-cov>=4.0.0",
-]
+[project.urls]
+Homepage = "https://github.com/YOUR_USERNAME/Cloud-Optimizer-OpenEnv"
+Repository = "https://github.com/YOUR_USERNAME/Cloud-Optimizer-OpenEnv.git"
+Documentation = "https://github.com/YOUR_USERNAME/Cloud-Optimizer-OpenEnv#readme"
 
-[project.scripts]
-# Server entry point - enables running via: uv run --project . server
-# or: python -m cloud_server.server.app
-server = "cloud_server.app:main"
+[tool.setuptools.packages.find]
+include = ["cloud_server*", "server*"]
+exclude = ["tests*", "docs*"]
 
-[tool.setuptools]
-include-package-data = true
-packages = ["cloud_server", "cloud_server.server"]
-package-dir = { "cloud_server" = ".", "cloud_server.server" = "server" }
+[tool.setuptools.package-data]
+cloud_server = ["templates/*", "static/*", "*.yaml"]

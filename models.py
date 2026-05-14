@@ -1,33 +1,45 @@
-# Copyright (c) Meta Platforms, Inc. and affiliates.
-# All rights reserved.
-#
-# This source code is licensed under the BSD-style license found in the
-# LICENSE file in the root directory of this source tree.
+# models.py
+from pydantic import Field, field_validator
+from typing import Optional
 
-"""
-Data models for the Cloud Server Environment.
+# Try different imports for OpenEnv compatibility
+try:
+    from openenv.core.env_server.types import Action, Observation
+except ImportError:
+    # Fallback for when openenv is not installed
+    from pydantic import BaseModel
+    Action = BaseModel
+    Observation = BaseModel
+    print("Warning: openenv not found, using fallback models", flush=True)
 
-The cloud_server environment is a simple test environment that echoes back messages.
-"""
-
-from pydantic import Field
-from openenv.core.env_server.types import Action, Observation
 
 class CloudServerAction(Action):
-    """
-    Action for the Cloud Server environment.
-    0: Decrease, 1: Maintain, 2: Increase
-    """
-    action: int = Field(..., description="Action to perform: 0, 1, or 2")
+    """Action for the Cloud Server environment"""
+    
+    action: int = Field(
+        ..., 
+        description="Scaling Control: 0=Decrease, 1=Maintain, 2=Increase",
+        ge=0, 
+        le=2
+    )
+    
+    @field_validator('action')
+    @classmethod
+    def validate_action(cls, v: int) -> int:
+        if v not in [0, 1, 2]:
+            print(f"WARNING: Invalid action {v} auto-corrected to 1", flush=True)
+            return 1
+        return v
 
 
 class CloudServerObservation(Observation):
-    """
-    Observation for the Cloud Server environment.
-    Note: We use 'Observation' as the base class to stay compliant with OpenEnv.
-    """
+    """Observation for the Cloud Server environment"""
+    
     traffic: int = Field(..., description="Current network traffic")
     servers: int = Field(..., description="Current number of active servers")
-    latency: int = Field(..., description="Current system latency")
-    message: str = Field(..., description="Status message")
-    
+    latency: float = Field(..., description="Current system latency in ms")
+    reward: float = Field(default=0.0, description="Current step reward")
+    done: bool = Field(default=False, description="Whether episode is complete")
+    message: str = Field(default="", description="Status message")
+    step: int = Field(default=0, description="Current step number")
+    task_id: str = Field(default="easy", description="Task difficulty level")

@@ -1,90 +1,114 @@
-# Copyright (c) Meta Platforms, Inc. and affiliates.
-# All rights reserved.
-#
-# This source code is licensed under the BSD-style license found in the
-# LICENSE file in the root directory of this source tree.
-
-"""
-FastAPI application for the Cloud Server Environment.
-
-This module creates an HTTP server that exposes the CloudServerEnvironment
-over HTTP and WebSocket endpoints, compatible with EnvClient.
-
-Endpoints:
-    - POST /reset: Reset the environment
-    - POST /step: Execute an action
-    - GET /state: Get current environment state
-    - GET /schema: Get action/observation schemas
-    - WS /ws: WebSocket endpoint for persistent sessions
-
-Usage:
-    # Development (with auto-reload):
-    uvicorn server.app:app --reload --host 0.0.0.0 --port 8000
-
-    # Production:
-    uvicorn server.app:app --host 0.0.0.0 --port 8000 --workers 4
-
-    # Or run directly:
-    python -m server.app
-"""
+# cloud_server/app.py
 import os
-try:
-    from openenv.core.env_server.http_server import create_app
-except Exception as e:  # pragma: no cover
-    raise ImportError(
-        "openenv is required for the web interface. Install dependencies with '\n    uv sync\n'"
-    ) from e
+from fastapi import FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import Optional
+import sys
 
-from models import CloudServerAction, CloudServerObservation
-from cloud_server.cloud_server_environment import CloudServerEnvironment
+# Add parent directory to path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+try:
+    from models import CloudServerAction, CloudServerObservation
+    from cloud_server.cloud_server_environment import CloudServerEnvironment
+except ImportError:
+    from models import CloudServerAction, CloudServerObservation
+    from cloud_server_environment import CloudServerEnvironment
 
 os.environ["ENABLE_WEB_INTERFACE"] = "true"
 
-# Create the app with web interface and README integration
-app = create_app(
-    CloudServerEnvironment,
-    CloudServerAction,
-    CloudServerObservation,
-    env_name="cloud_server",
-    max_concurrent_envs=1,  # increase this number to allow more concurrent WebSocket sessions
+# Create the main FastAPI app
+app = FastAPI(title="Cloud Optimizer Pro", version="2.0.0")
+
+# Add CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
+# Initialize environment
+env = CloudServerEnvironment()
 
-def main(host: str = "0.0.0.0", port: int = 8000, reload: bool = False):
-    """
-    Entry point for direct execution via uv run or python -m.
+class StepRequest(BaseModel):
+    action: int
 
-    This function enables running the server without Docker:
-        uv run --project . server
-        uv run --project . server --port 8001
-        python -m cloud_server.server.app
+class ResetRequest(BaseModel):
+    task_id: str = "easy"
 
-    Args:
-        host: Host address to bind to (default: "0.0.0.0")
-        port: Port number to listen on (default: 8000)
+# Get the directory where this file is located
+current_dir = os.path.dirname(os.path.abspath(__file__))
+templates_dir = os.path.join(os.path.dirname(current_dir), "templates")
 
-    For production deployments, consider using uvicorn directly with
-    multiple workers:
-        uvicorn cloud_server.server.app:app --workers 4
-    """
-    import uvicorn
-    print(reload)
+@app.get("/", response_class=HTMLResponse)
+async def root():
+    """Serve the enhanced UI"""
+    index_path = os.path.join(templates_dir, "index.html")
+    if os.path.exists(index_path):
+        with open(index_path, "r") as f:
+            return HTMLResponse(content=f.read())
+    else:
+        return HTMLResponse(content="<h1>Cloud Optimizer Pro</h1><p>Templates not found. Please ensure templates/index.html exists.</p>")
+
+@app.get("/health")
+async def health():
+    return {"status": "healthy", "service": "Cloud Optimizer Pro"}
+
+@app.get("/task-info")
+async def task_info():
+    return {
+        "tasks": ["easy", "medium", "hard"],
+        "current_task": env.current_task,
+        "description": {
+            "easy": "Stable traffic (100-200 req/s)",
+            "medium": "Oscillating traffic (120-280 req/s)",
+            "hard": "Stress test with spikes (100-500 req/s)"
+        }
+    }
+
+@app.post("/reset")
+async def reset_env(request: ResetRequest):
+    """Reset the environment"""
+    observation = env.reset(request.task_id)
+    return {
+        "traffic": observation.traffic,
+        "servers": observation.servers,
+        "latency": observation.latency,
+        "reward": observation.reward,
+        "done": observation.done,
+        "message": observation.message,
+        "step": observation.step,
+        "task_id": observation.task_id
+    }
+
+@app.post("/step")
+async def step_env(request: StepRequest):
+    """Execute a step"""
+    # Validate action
+    if request.action not in [0, 1, 2]:
+        return JSONResponse(
+            status_code=400,
+            content={"error": "Invalid action. Must be 0, 1, or 2"}
+        )
     
-
-    # uvicorn.run(app, host=host, port=port, reload=reload)
-    uvicorn.run(
-        "cloud_server.app:app", 
-        host="0.0.0.0", 
-        port=port, 
-        reload=True
-    )
-
+    action = CloudServerAction(action=request.action)
+    observation = env.step(action)
+    return {
+        "traffic": observation.traffic,
+        "servers": observation.servers,
+        "latency": observation.latency,
+        "reward": observation.reward,
+        "done": observation.done,
+        "message": observation.message,
+        "step": observation.step,
+        "task_id": observation.task_id
+    }
 
 if __name__ == "__main__":
-    import argparse
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--port", type=int, default=8000)
-    parser.add_argument("--reload", action="store_true", help="Enable auto-reload", default=True)
-    args = parser.parse_args()
-    main(port=args.port, reload=True)
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
